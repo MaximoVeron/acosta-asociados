@@ -34,9 +34,11 @@ export const env = {
   },
 
   // Microservicio de IA (Python) — usado por clients/agentClient.js
+  // Timeout alto a propósito: el LLM local (qwen3:4b con razonamiento)
+  // puede tardar varios minutos por turno en CPU.
   ai: {
     baseUrl: process.env.AI_API_URL || "http://localhost:8000",
-    timeoutMs: Number(process.env.AI_TIMEOUT_MS) || 30000,
+    timeoutMs: Number(process.env.AI_TIMEOUT_MS) || 300000,
   },
 };
 
