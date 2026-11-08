@@ -45,7 +45,9 @@ const tableToHtml = (block) => {
  */
 export function documentToHtml(text) {
   if (!text) return ''
-  const limpio = escapeHtml(text).replace(/\\_/g, '_') // \_ → _ (líneas de firma)
+  // Normalizamos CRLF: el texto puede venir de un .doc pegado o de Windows,
+  // y el parser de bloques/tablas trabaja con saltos de línea simples.
+  const limpio = escapeHtml(text.replace(/\r\n/g, '\n')).replace(/\\_/g, '_') // \_ → _ (líneas de firma)
   return limpio
     .split(/\n{2,}/)
     .map((bloque) => {

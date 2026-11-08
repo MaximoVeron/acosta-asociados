@@ -38,7 +38,7 @@ export const env = {
   // puede tardar varios minutos por turno en CPU.
   ai: {
     baseUrl: process.env.AI_API_URL || "http://localhost:8000",
-    timeoutMs: Number(process.env.AI_TIMEOUT_MS) || 300000,
+    timeoutMs: Number(process.env.AI_TIMEOUT_MS) || 600000,
   },
 };
 

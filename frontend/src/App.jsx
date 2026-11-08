@@ -16,6 +16,7 @@ import ContractsPage from './pages/ContractsPage.jsx'
 import ContractReview from './pages/ContractReview.jsx'
 import PartiesPage from './pages/PartiesPage.jsx'
 import CaseFilesPage from './pages/CaseFilesPage.jsx'
+import CaseFileDetail from './pages/CaseFileDetail.jsx'
 import UsersAdminPage from './pages/UsersAdminPage.jsx'
 
 export default function App() {
@@ -34,6 +35,7 @@ export default function App() {
           <Route path="/contracts/:id" element={<ContractReview />} />
           <Route path="/parties" element={<PartiesPage />} />
           <Route path="/case-files" element={<CaseFilesPage />} />
+          <Route path="/case-files/:id" element={<CaseFileDetail />} />
 
           {/* Gestión de personal: exclusivo ADMIN */}
           <Route element={<ProtectedRoute roles={['ADMIN']} />}>

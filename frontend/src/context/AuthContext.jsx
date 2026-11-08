@@ -11,13 +11,6 @@ import api from '../api/axiosConfig.js'
 
 const AuthContext = createContext(null)
 
-/** Etiquetas legibles de rol para la UI. */
-export const ROLE_LABELS = {
-  ADMIN: 'Administrador',
-  LAWYER: 'Abogado/a',
-  ASSISTANT: 'Asistente',
-}
-
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   // loading = todavía no sé si hay sesión válida (checkAuth en curso)

@@ -68,6 +68,11 @@ Documentación interactiva: http://localhost:8000/docs
 | POST   | `/extract`             | Adaptador para el cliente Node existente (`api-rest/src/clients/agentClient.js`). Body: `{ "content": str, "document_type"? }`. |
 | GET    | `/health`              | Health-check del servicio y modelo configurado.                              |
 
+> El frontend **no llama directo** a este servicio: el backend Node lo expone en
+> `POST /api/v1/ai/process` (cookie JWT obligatoria) y reenvía el turno a
+> `/ai/process-contract`. Así la IA queda detrás de la autenticación y en un solo
+> origen (sin CORS adicional en el navegador).
+
 ### Flujo multi-turno (slot filling)
 
 El frontend/backend conserva `current_data` entre turnos y lo reenvía en cada

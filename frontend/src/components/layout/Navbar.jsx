@@ -4,7 +4,8 @@
  */
 import { useNavigate } from 'react-router-dom'
 import { LogOut } from 'lucide-react'
-import { useAuth, ROLE_LABELS } from '../../context/AuthContext.jsx'
+import { useAuth } from '../../context/AuthContext.jsx'
+import { ROLE_LABELS } from '../../constants/roles.js'
 
 /** Colores del badge de rol (sobrio, coherente con la paleta institucional). */
 const ROLE_BADGE_STYLES = {

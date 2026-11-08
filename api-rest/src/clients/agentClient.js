@@ -1,73 +1,57 @@
 /**
- * clients/agentClient.js — STUB del cliente del microservicio de IA (Python).
+ * clients/agentClient.js — Cliente del microservicio IA (Python/FastAPI).
  *
- * Preparado para la futura integración: cuando el microservicio esté
- * disponible, exponerá endpoints para extraer datos estructurados del
- * texto de un contrato (plazos, montos, objeto) que se guardarán en
- * Contract.extractedData (JSONB).
+ * Único punto del backend que habla con el servicio de IA. La URL base y el
+ * timeout se configuran en src/config/env.js (AI_API_URL, AI_TIMEOUT_MS).
  *
- * La URL base y el timeout se configuran en src/config/env.js
- * (AI_API_URL, AI_TIMEOUT_MS). Este cliente NO está conectado a ninguna
- * ruta todavía.
+ * El timeout es alto a propósito: el LLM local (qwen3:4b con razonamiento)
+ * puede tardar varios minutos por turno en CPU.
  */
 import { env } from "../config/env.js";
+import { createHttpError } from "../middlewares/errorHandler.js";
 
 /**
- * Extrae datos estructurados del contenido de un contrato usando el
- * microservicio de IA.
+ * Envía un turno de la conversación al microservicio y devuelve su respuesta.
  *
- * @param {string} content Cuerpo completo del contrato en texto.
- * @returns {Promise<object>} Datos extraídos (objeto, monto, plazos, ...).
- * @throws Error si el microservicio no responde o responde con error.
- *
- * STUB: la implementación real ya está escrita contra la API acordada
- * (POST {AI_API_URL}/extract con { content }); cuando el servicio Python
- * no exista, la llamada fallará y el caller deberá decidir si continuar
- * sin extractedData.
+ * @param {{ prompt: string, document_type: string, current_data: object|null }} payload
+ * @returns {Promise<object>} { status, current_data, missing_fields, agent_message, rendered_document }
+ * @throws Error con statusCode 502/504 si el servicio no responde.
  */
-export const extractContractData = async (content) => {
+export const processDocumentTurn = async (payload) => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), env.ai.timeoutMs);
 
   try {
-    const response = await fetch(`${env.ai.baseUrl}/extract`, {
+    const response = await fetch(`${env.ai.baseUrl}/ai/process-contract`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content }),
+      body: JSON.stringify(payload),
       signal: controller.signal,
     });
 
     if (!response.ok) {
-      throw new Error(
-        `El microservicio de IA respondió ${response.status}: ${response.statusText}`,
+      // FastAPI responde los errores del agente en `detail`
+      const body = await response.json().catch(() => null);
+      throw createHttpError(
+        502,
+        body?.detail || `El microservicio de IA respondió ${response.status}.`,
       );
     }
 
     return await response.json();
   } catch (error) {
+    if (error.statusCode) throw error;
     if (error.name === "AbortError") {
-      throw new Error(
-        `Timeout de ${env.ai.timeoutMs}ms al contactar el microservicio de IA.`,
+      throw createHttpError(
+        504,
+        `El microservicio de IA no respondió en ${Math.round(env.ai.timeoutMs / 1000)} segundos.`,
       );
     }
-    throw error;
+    throw createHttpError(
+      502,
+      `No se pudo conectar con el microservicio de IA en ${env.ai.baseUrl}. Verifique que esté corriendo.`,
+    );
   } finally {
     clearTimeout(timeout);
-  }
-};
-
-/**
- * Health-check del microservicio de IA.
- * STUB: útil para verificar la conexión cuando se integre el servicio.
- * @returns {Promise<boolean>} true si el servicio responde.
- */
-export const checkAgentHealth = async () => {
-  try {
-    const response = await fetch(`${env.ai.baseUrl}/health`, {
-      signal: AbortSignal.timeout(5000),
-    });
-    return response.ok;
-  } catch {
-    return false;
   }
 };

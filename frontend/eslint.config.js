@@ -18,4 +18,14 @@ export default defineConfig([
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
   },
+  {
+    // AuthContext exporta el provider y su hook de acceso (patrón habitual de
+    // React) y reconstruye la sesión en un efecto de montaje cuyo setState
+    // ocurre en callbacks async, no en el cuerpo del efecto.
+    files: ['src/context/AuthContext.jsx'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+      'react-hooks/set-state-in-effect': 'off',
+    },
+  },
 ])

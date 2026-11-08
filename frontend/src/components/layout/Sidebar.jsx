@@ -18,7 +18,7 @@ import { useAuth } from '../../context/AuthContext.jsx'
 
 const NAV_ITEMS = [
   { to: '/', label: 'Inicio / Resumen', icon: LayoutDashboard, end: true },
-  { to: '/contracts/new', label: 'Asistente de Contratos', icon: Sparkles },
+  { to: '/contracts/new', label: 'Asistente de Documentos', icon: Sparkles },
   { to: '/contracts', label: 'Repositorio de Contratos', icon: ScrollText },
   { to: '/parties', label: 'Clientes y Partes', icon: UsersRound },
   { to: '/case-files', label: 'Expedientes Jurídicos', icon: FolderArchive },
