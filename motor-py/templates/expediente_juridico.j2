@@ -1,0 +1,165 @@
+{#-
+  Plantilla oficial: EXPEDIENTE JURÍDICO.
+  Réplica fiel de document/expediente_ejemplo_EXP-001, con variables Jinja2
+  donde van los datos del usuario. El texto legal/estructural es fijo.
+
+  Las ranuras opcionales de texto muestran "—" si vienen vacías; las tablas
+  (actuaciones, documentación) solo se dibujan si el usuario cargó filas.
+-#}
+ACOSTA & ASOCIADOS
+
+EXPEDIENTE JURÍDICO
+
+Código de documento: {{ numero_expediente }} · Versión: 1.0 · Tipo: Expediente jurídico
+
+1. IDENTIFICACIÓN DEL EXPEDIENTE
+
+* Número de expediente: **{{ numero_expediente }}**
+
+* Fecha de apertura: **{{ fecha_apertura }}**
+
+* Tipo de expediente: **{{ tipo_expediente }}**
+
+* Área responsable: **{{ area_responsable or "Derecho Comercial" }}**
+
+* Profesional responsable: **{{ profesional_responsable }}**
+
+* Estado actual: **{{ estado or "En trámite" }}**
+
+* Nivel de prioridad: **{{ prioridad or "Media" }}**
+
+2. CARÁTULA
+
+Denominación del expediente:
+
+**{{ caratula }}**
+
+Objeto del expediente:
+
+**{{ objeto }}**
+
+Descripción general:
+
+**{{ descripcion_general or "—" }}**
+
+3. PARTES INVOLUCRADAS
+
+Parte solicitante
+
+* Nombre o razón social: **{{ solicitante_name }}**
+
+* DNI/CUIT: **{{ solicitante_tax_id }}**
+
+* Domicilio: **{{ solicitante_address or "—" }}**
+
+* Correo electrónico: **{{ solicitante_email or "—" }}**
+
+* Teléfono: **{{ solicitante_phone or "—" }}**
+
+Parte involucrada / contraparte
+
+* Nombre o razón social: **{{ contraparte_name }}**
+
+* DNI/CUIT: **{{ contraparte_tax_id }}**
+
+* Domicilio: **{{ contraparte_address or "—" }}**
+
+* Información adicional: **{{ contraparte_info or "—" }}**
+
+Representación legal
+
+* Profesional asignado: **{{ profesional_responsable }}**
+
+* Matrícula profesional: **{{ matricula or "—" }}**
+
+4. ANTECEDENTES
+
+Descripción de los antecedentes:
+
+**{{ antecedentes_descripcion or "—" }}**
+
+Fecha del hecho o acontecimiento principal:
+
+**{{ antecedentes_fecha or "—" }}**
+
+Origen de la solicitud:
+
+**{{ antecedentes_origen or "—" }}**
+
+Documentación inicial aportada:
+
+**{{ antecedentes_documentacion or "—" }}**
+
+5. ACTUACIONES Y MOVIMIENTOS
+
+{% if actuaciones %}
+| Fecha | Actuación | Responsable | Observaciones |
+| :---- | :---- | :---- | :---- |
+{% for a in actuaciones %}
+| **{{ a.fecha }}** | **{{ a.actuacion }}** | **{{ a.responsable }}** | **{{ a.observaciones }}** |
+{% endfor %}
+{% else %}
+Se registrarán cronológicamente las actuaciones realizadas durante la gestión del expediente.
+{% endif %}
+
+6. DOCUMENTACIÓN ASOCIADA
+
+{% if documentacion %}
+| Identificador | Nombre del documento | Fecha de incorporación | Descripción |
+| :---- | :---- | :---- | :---- |
+{% for d in documentacion %}
+| **{{ d.identificador }}** | **{{ d.nombre }}** | **{{ d.fecha }}** | **{{ d.descripcion }}** |
+{% endfor %}
+{% else %}
+Se incorporará el detalle de los documentos que forman parte del expediente.
+{% endif %}
+
+7. OBSERVACIONES Y REQUERIMIENTOS PENDIENTES
+
+Observaciones generales:
+
+**{{ observaciones or "—" }}**
+
+Información pendiente de incorporar:
+
+**{{ info_pendiente or "—" }}**
+
+Documentación pendiente:
+
+**{{ documentacion_pendiente or "—" }}**
+
+Próximas acciones previstas:
+
+**{{ proximas_acciones or "—" }}**
+
+8. ESTADO Y CONCLUSIONES
+
+Estado del expediente:
+
+**{{ estado or "En trámite" }}**
+
+Resumen de situación:
+
+**{{ resumen_situacion or "—" }}**
+
+Conclusiones del profesional responsable:
+
+**{{ conclusiones or "—" }}**
+
+Fecha de última actualización:
+
+**{{ fecha_actualizacion or fecha_apertura }}**
+
+9. RESPONSABLE DE LA DOCUMENTACIÓN
+
+* Profesional responsable: **{{ profesional_responsable }}**
+
+* Matrícula: **{{ matricula or "—" }}**
+
+* Fecha de elaboración: **{{ fecha_apertura }}**
+
+Firma y validación profesional:
+
+\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
+
+ACOSTA & ASOCIADOS

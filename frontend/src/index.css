@@ -28,3 +28,47 @@ body {
 .hl-field {
   @apply rounded-sm bg-yellow-100/80 px-1;
 }
+
+/* Ranura aún vacía en la vista previa en vivo */
+.hl-missing {
+  @apply rounded-sm border border-dashed border-amber-400 bg-amber-50 px-1 text-amber-700;
+}
+
+/* Hoja tamaño A4: simula el documento físico (blanco, sombra sutil, serif) */
+.a4-sheet {
+  @apply mx-auto w-full max-w-[210mm] border border-slate-200 bg-white px-8 py-10 text-sm leading-relaxed text-slate-800 shadow-md;
+  font-family: var(--font-serif);
+}
+
+/* Tablas dentro del documento (expediente) */
+.doc-table {
+  @apply my-3 w-full border-collapse text-xs;
+}
+.doc-table th,
+.doc-table td {
+  @apply border border-slate-300 px-2 py-1.5 text-left align-top;
+}
+.doc-table th {
+  @apply bg-slate-100 font-bold;
+}
+
+/* Impresión (RF08): solo la hoja A4; fuera sidebar, navbar y botones */
+@media print {
+  body {
+    background: white !important;
+  }
+  aside,
+  header,
+  .no-print {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+  }
+  .a4-sheet {
+    max-width: none;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+  }
+}

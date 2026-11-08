@@ -1,0 +1,85 @@
+{#-
+  Plantilla oficial: CONTRATO DE PRESTACIÓN DE SERVICIOS PROFESIONALES.
+  Réplica fiel de document/contrato_ejemplo_CONT-001, con variables Jinja2
+  donde van los datos del usuario. El texto legal es fijo: el LLM no lo toca.
+
+  Variables que calcula agent_service.render_template():
+    firma_dia / firma_mes / firma_anio  → fecha de firma (default: hoy)
+    duracion_palabras                   → "seis" (para "seis (6) meses")
+    total_fee_display                   → "4.800.000"
+    total_fee_palabras                  → "cuatro millones ochocientos mil"
+-#}
+ACOSTA & ASOCIADOS
+
+CONTRATO DE PRESTACIÓN DE SERVICIOS PROFESIONALES
+
+En la ciudad de **Rosario**, Provincia de **Santa Fe**, República Argentina, a los **{{ firma_dia }}** días del mes de **{{ firma_mes }}** de **{{ firma_anio }}**, entre:
+
+PARTE CONTRATANTE: **{{ contractor_name }}**, DNI/CUIT N.º **{{ contractor_tax_id }}**{% if contractor_address %}, con domicilio en **{{ contractor_address }}**{% endif %}{% if contractor_representative %}, representada en este acto por **{{ contractor_representative }}**{% endif %}, en adelante denominada "LA CONTRATANTE".
+
+PARTE PRESTADORA: **{{ contractee_name }}**, DNI/CUIT N.º **{{ contractee_tax_id }}**{% if contractee_address %}, con domicilio en **{{ contractee_address }}**{% endif %}, en adelante denominada "EL PRESTADOR".
+
+Ambas partes acuerdan celebrar el presente Contrato de Prestación de Servicios Profesionales, sujeto a las siguientes cláusulas:
+
+PRIMERA: OBJETO DEL CONTRATO
+
+LA CONTRATANTE encomienda a EL PRESTADOR la realización de los siguientes servicios profesionales:
+
+**{{ service_object }}**
+
+EL PRESTADOR acepta realizar las actividades descriptas conforme a las condiciones establecidas en el presente documento.
+
+SEGUNDA: PLAZO DE VIGENCIA
+
+El presente contrato tendrá una duración de **{{ duracion_palabras }} ({{ duration_months }}) meses**, comenzando su vigencia el día **{{ start_date }}**{% if end_date %} y finalizando el día **{{ end_date }}**{% endif %}, salvo renovación o rescisión conforme a las condiciones aquí establecidas.
+
+TERCERA: HONORARIOS Y FORMA DE PAGO
+
+LA CONTRATANTE abonará a EL PRESTADOR la suma total de **$ {{ total_fee_display }}** (**pesos {{ total_fee_palabras }}**).
+
+La modalidad de pago será: **{{ payment_terms }}**.
+
+Los pagos deberán realizarse mediante **{{ payment_method or "transferencia bancaria a la cuenta indicada por EL PRESTADOR" }}**.
+
+CUARTA: OBLIGACIONES DEL PRESTADOR
+
+EL PRESTADOR se compromete a:
+
+1. Realizar los servicios acordados con diligencia profesional.
+
+2. Cumplir con los plazos establecidos.
+
+3. Mantener la confidencialidad de la información recibida.
+
+4. Informar a LA CONTRATANTE sobre cualquier circunstancia que pueda afectar la prestación del servicio.
+
+QUINTA: OBLIGACIONES DE LA CONTRATANTE
+
+LA CONTRATANTE se compromete a:
+
+1. Proporcionar la información necesaria para la ejecución de los servicios.
+
+2. Abonar los honorarios conforme a lo acordado.
+
+3. Facilitar los recursos y documentación previamente convenidos.
+
+SEXTA: CONFIDENCIALIDAD
+
+Ambas partes se comprometen a mantener la confidencialidad de la información intercambiada durante la vigencia del contrato, conforme a las obligaciones legales aplicables.
+
+SÉPTIMA: RESCISIÓN
+
+Cualquiera de las partes podrá solicitar la rescisión del presente contrato mediante notificación fehaciente con una anticipación de **treinta (30)** días, sin perjuicio de las obligaciones pendientes que pudieran corresponder.
+
+OCTAVA: JURISDICCIÓN
+
+Para cualquier controversia derivada de la interpretación o ejecución del presente contrato, las partes acuerdan someterse a la jurisdicción de los tribunales competentes de **{{ jurisdiction or "la ciudad de Rosario, Provincia de Santa Fe" }}**, conforme a la normativa aplicable.
+
+NOVENA: ACEPTACIÓN
+
+Leído y ratificado el presente documento, las partes manifiestan su conformidad y suscriben dos ejemplares de igual tenor.
+
+| LA CONTRATANTE Nombre: {{ contractor_name }} Documento: CUIT {{ contractor_tax_id }} Firma: \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_ | EL PRESTADOR Nombre: {{ contractee_name }} Documento: DNI {{ contractee_tax_id }} Firma: \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_ |
+| :---- | :---- |
+
+ACOSTA & ASOCIADOS

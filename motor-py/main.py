@@ -1,8 +1,14 @@
 """
 main.py — Microservicio IA "Acosta & Asociados" (FastAPI + Ollama).
 
+Genera los DOS documentos oficiales del estudio a partir de lenguaje
+natural (plantillas en document/, réplicas Jinja2 en templates/):
+  - CONTRATO:   Contrato de Prestación de Servicios Profesionales
+  - EXPEDIENTE: Expediente Jurídico
+
 Endpoints:
   POST /ai/process-contract → endpoint principal (slot filling, RF02-RF05).
+                              Acepta document_type: "CONTRATO" | "EXPEDIENTE".
   POST /extract             → adaptador para el cliente Node existente
                               (api-rest/src/clients/agentClient.js).
   GET  /health              → health-check del servicio.
@@ -24,7 +30,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from schemas.contract import ProcessRequest, ProcessResponse
+from schemas.contract import DocumentType, ProcessRequest, ProcessResponse
 from services.agent_service import OLLAMA_MODEL, AgentError, process_chat
 
 load_dotenv()
@@ -74,13 +80,20 @@ class ExtractRequest(BaseModel):
     """Cuerpo del adaptador /extract: así llama el cliente Node existente."""
 
     content: str = Field(min_length=1, description="Texto libre a procesar.")
+    document_type: DocumentType = Field("CONTRATO", description="Tipo de documento a generar.")
 
 
 @app.post("/extract", response_model=ProcessResponse)
 def extract_adapter(request: ExtractRequest):
     """Equivalente a process-contract sin ranuras previas (para Node)."""
     try:
-        return process_chat(ProcessRequest(prompt=request.content, current_data=None))
+        return process_chat(
+            ProcessRequest(
+                prompt=request.content,
+                document_type=request.document_type,
+                current_data=None,
+            )
+        )
     except AgentError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 

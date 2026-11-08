@@ -1,22 +1,35 @@
 # Microservicio IA — Acosta & Asociados
 
-Servicio de **Slot Filling** para generación de contratos legales, construido con
+Servicio de **Slot Filling** para generación de documentos legales, construido con
 **FastAPI + Ollama (LLM local) + Pydantic + Jinja2**.
+
+Genera los **dos documentos oficiales** del estudio, replicando fielmente los
+modelos de la carpeta `document/`:
+
+| `document_type` | Documento                                   | Modelo oficial                       | Plantilla Jinja2                          |
+| --------------- | ------------------------------------------- | ------------------------------------ | ----------------------------------------- |
+| `CONTRATO`      | Contrato de Prestación de Servicios Profesionales | `contrato_ejemplo_CONT-001(1).docx.md` | `templates/contrato_prestacion_servicios.j2` |
+| `EXPEDIENTE`    | Expediente Jurídico                          | `expediente_ejemplo_EXP-001(1).docx.md` | `templates/expediente_juridico.j2`        |
 
 ## Principio de diseño (anti-alucinación)
 
-El LLM **nunca redacta el contrato**. Su única tarea es extraer un JSON
+El LLM **nunca redacta el documento**. Su única tarea es extraer un JSON
 estructurado a partir del texto libre del empleado. Python valida ese JSON,
 detecta las ranuras faltantes y, solo cuando están todas las obligatorias,
-renderiza la **plantilla oficial fija** (9 cláusulas, Jinja2) del estudio.
+renderiza la **plantilla oficial fija** (Jinja2 → texto legal idéntico al
+modelo de `document/`). Los montos en letras los calcula un módulo
+determinista (`services/numeros_a_letras.py`), nunca el LLM.
 
 ```
-Empleado (texto libre) → POST /ai/process-contract
+Empleado (texto libre) → POST /ai/process-contract { prompt, document_type, current_data }
     → extract_entities (ollama.chat, format="json")
     → evaluate_completeness (RF04)
         ├─ INCOMPLETE → missing_fields + agent_message pidiendo los datos
         └─ COMPLETE   → render_template (RF05) → rendered_document
 ```
+
+El tipo de documento lo decide el **selector de plantilla del frontend**
+(`document_type`), no el LLM: es determinista y más confiable.
 
 ## Requisitos
 
@@ -51,8 +64,8 @@ Documentación interactiva: http://localhost:8000/docs
 
 | Método | Ruta                   | Descripción                                                                 |
 | ------ | ---------------------- | --------------------------------------------------------------------------- |
-| POST   | `/ai/process-contract` | Endpoint principal. Body: `{ "prompt": str, "current_data": dict? }`. Devuelve `{ status, current_data, missing_fields, agent_message, rendered_document? }`. |
-| POST   | `/extract`             | Adaptador para el cliente Node existente (`api-rest/src/clients/agentClient.js`). Body: `{ "content": str }`. |
+| POST   | `/ai/process-contract` | Endpoint principal. Body: `{ "prompt": str, "document_type": "CONTRATO"\|"EXPEDIENTE", "current_data": dict? }`. Devuelve `{ status, current_data, missing_fields, agent_message, rendered_document? }`. |
+| POST   | `/extract`             | Adaptador para el cliente Node existente (`api-rest/src/clients/agentClient.js`). Body: `{ "content": str, "document_type"? }`. |
 | GET    | `/health`              | Health-check del servicio y modelo configurado.                              |
 
 ### Flujo multi-turno (slot filling)
@@ -62,13 +75,19 @@ request. El servicio lo fusiona con lo extraído del nuevo `prompt`:
 
 ```jsonc
 // Turno 1
-{ "prompt": "Contrato de servicios para Lucía Fernández, CUIL 35.678.901" }
+{ "document_type": "CONTRATO",
+  "prompt": "Contrato de servicios para Lucía Fernández, CUIL 35.678.901" }
 // → status: "INCOMPLETE", missing_fields: ["contractor_name", ...]
 
 // Turno 2 (se reenvían las ranuras ya llenas)
-{ "prompt": "El contratante es Distribuidora del Litoral S.R.L., CUIT 30-71234567-8, ...",
+{ "document_type": "CONTRATO",
+  "prompt": "El contratante es Distribuidora del Litoral S.R.L., CUIT 30-71234567-8, ...",
   "current_data": { /* respuesta del turno 1 */ } }
 // → status: "COMPLETE", rendered_document: "<contrato oficial>"
+
+// Expediente (mismo endpoint, otro document_type)
+{ "document_type": "EXPEDIENTE",
+  "prompt": "Cargá el expediente EXP-2026-0147, abierto el 12/02/2026, ..." }
 ```
 
 ## El modelo local y su latencia (leer antes de demo)
@@ -93,12 +112,17 @@ Si dispone de un modelo local más grande o GPU, cámbielo con
 ```
 motor-py/
 ├── main.py                        # FastAPI: endpoints y CORS
+├── document/                      # Modelos oficiales del estudio (fuente de verdad)
+│   ├── contrato_ejemplo_CONT-001(1).docx.md
+│   └── expediente_ejemplo_EXP-001(1).docx.md
 ├── schemas/
-│   └── contract.py                # Pydantic: ContractData, ProcessRequest, ProcessResponse
+│   └── contract.py                # Pydantic: ContractData, ExpedienteData, ProcessRequest/Response
 ├── services/
-│   └── agent_service.py           # Extracción (Ollama), completitud (RF04), render (RF05)
-├── templates/
-│   └── prestacion_servicios.j2    # Plantilla oficial fija (cláusulas Primera a Novena)
+│   ├── agent_service.py           # Extracción (Ollama), completitud (RF04), render (RF05)
+│   └── numeros_a_letras.py        # Montos en letras (determinista, sin LLM)
+├── templates/                     # Réplicas Jinja2 de los modelos oficiales
+│   ├── contrato_prestacion_servicios.j2
+│   └── expediente_juridico.j2
 ├── requirements.txt               # Referencia pip (el proyecto usa uv/pyproject.toml)
 └── pyproject.toml                 # Dependencias gestionadas con uv
 ```

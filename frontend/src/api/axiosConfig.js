@@ -16,6 +16,17 @@ const api = axios.create({
 })
 
 /**
+ * Instancia para el microservicio de IA (Python/FastAPI, puerto 8000).
+ * No usa credenciales (no hay cookie ahí) y el timeout es alto a propósito:
+ * el LLM local con razonamiento puede tardar varios minutos por turno.
+ */
+export const aiApi = axios.create({
+  baseURL: import.meta.env.VITE_AI_URL || 'http://localhost:8000',
+  timeout: 300000,
+  headers: { 'Content-Type': 'application/json' },
+})
+
+/**
  * Extrae un mensaje de error legible de cualquier respuesta de la API.
  * Útil para mostrar errores en formularios sin repetir lógica.
  */

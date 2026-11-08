@@ -11,9 +11,9 @@ export default function AppLayout() {
     <div className="min-h-screen bg-slate-50">
       <Sidebar />
       {/* En desktop el contenido se desplaza el ancho del sidebar fijo */}
-      <div className="flex min-h-screen flex-col md:pl-64">
+      <div className="flex min-h-screen flex-col md:pl-64 print:pl-0">
         <Navbar />
-        <main className="flex-1 p-4 md:p-6">
+        <main className="flex-1 p-4 md:p-6 print:p-0">
           <Outlet />
         </main>
       </div>
