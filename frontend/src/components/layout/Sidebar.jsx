@@ -4,7 +4,7 @@
  * bg-slate-900 con acentos dorados (amber) en el ítem activo.
  * "Personal del Estudio" solo se renderiza si user.role === 'ADMIN'.
  */
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import {
   Scale,
   LayoutDashboard,
@@ -19,7 +19,7 @@ import { useAuth } from '../../context/AuthContext.jsx'
 const NAV_ITEMS = [
   { to: '/', label: 'Inicio / Resumen', icon: LayoutDashboard, end: true },
   { to: '/contracts/new', label: 'Asistente de Documentos', icon: Sparkles },
-  { to: '/contracts', label: 'Repositorio de Contratos', icon: ScrollText },
+  { to: '/contracts', label: 'Repositorio de Contratos', icon: ScrollText, exclude: '/contracts/new' },
   { to: '/parties', label: 'Clientes y Partes', icon: UsersRound },
   { to: '/case-files', label: 'Expedientes Jurídicos', icon: FolderArchive },
   { to: '/users', label: 'Personal del Estudio', icon: ShieldCheck, adminOnly: true },
@@ -27,6 +27,7 @@ const NAV_ITEMS = [
 
 export default function Sidebar() {
   const { user } = useAuth()
+  const { pathname } = useLocation()
 
   const visibleItems = NAV_ITEMS.filter(
     (item) => !item.adminOnly || user?.role === 'ADMIN',
@@ -50,18 +51,20 @@ export default function Sidebar() {
       {/* Menú de secciones */}
       <nav className="flex-1 overflow-y-auto py-4">
         <ul className="space-y-1">
-          {visibleItems.map(({ to, label, icon: Icon, end }) => (
+          {visibleItems.map(({ to, label, icon: Icon, end, exclude }) => (
             <li key={to}>
               <NavLink
                 to={to}
                 end={end}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 border-l-2 px-5 py-2.5 text-sm transition-colors ${
+                className={({ isActive: matches }) => {
+                  // "/contracts" también coincide por prefijo con "/contracts/new": se excluye
+                  const isActive = matches && !(exclude && pathname.startsWith(exclude))
+                  return `flex items-center gap-3 border-l-2 px-5 py-2.5 text-sm transition-colors ${
                     isActive
                       ? 'border-amber-500 bg-slate-800/80 font-semibold text-amber-400'
                       : 'border-transparent text-slate-300 hover:bg-slate-800/60 hover:text-white'
                   }`
-                }
+                }}
               >
                 <Icon className="h-4.5 w-4.5 shrink-0" />
                 {label}
