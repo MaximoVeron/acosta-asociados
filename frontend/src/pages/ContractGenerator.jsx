@@ -1,10 +1,11 @@
 /**
  * ContractGenerator.jsx — Asistente de redacción (RF01–RF06).
  *
- * Columna izquierda: selector de plantilla (RF02), partes desde GET /parties,
- * chat en lenguaje natural y panel de datos faltantes (RF04/RF06).
- * Columna derecha: hoja A4 con vista previa en vivo (RF05) y, cuando el
- * microservicio IA devuelve el documento completo, el texto oficial renderizado.
+ * Columna izquierda: configuración — selector de plantilla (RF02), partes desde
+ * GET /parties, panel de datos requeridos (RF04/RF06) y guardado.
+ * Columna derecha: chat en lenguaje natural con el modelo (RF01/RF03) y, en otra
+ * pestaña, la hoja A4 con el texto oficial renderizado cuando el microservicio IA
+ * devuelve el documento completo (RF05).
  *
  * Integración: cada mensaje va a POST {AI}/ai/process-contract con
  * { prompt, document_type, current_data }. El servicio acumula las ranuras y
@@ -93,30 +94,6 @@ const FIELD_LABELS = {
   },
 }
 
-/** Ranuras extra de la vista previa (las que no son obligatorias). */
-const EXTRA_LABELS = {
-  CONTRATO: {
-    contractor_address: 'Domicilio de la parte contratante',
-    contractor_representative: 'Representante de la parte contratante',
-    contractee_address: 'Domicilio de la parte prestadora',
-    end_date: 'Fecha de finalización',
-    payment_method: 'Medio de pago',
-    jurisdiction: 'Jurisdicción',
-  },
-  EXPEDIENTE: {
-    area_responsable: 'Área responsable',
-    matricula: 'Matrícula profesional',
-    estado: 'Estado',
-    prioridad: 'Prioridad',
-    descripcion_general: 'Descripción general',
-    solicitante_address: 'Domicilio de la solicitante',
-    solicitante_email: 'Email de la solicitante',
-    solicitante_phone: 'Teléfono de la solicitante',
-    contraparte_address: 'Domicilio de la contraparte',
-    contraparte_info: 'Información adicional de la contraparte',
-  },
-}
-
 /** Convierte las partes elegidas en ranuras del documento. */
 const partySlots = (documentType, contractor, contractee) => {
   const raw =
@@ -172,6 +149,7 @@ export default function ContractGenerator() {
   const [data, setData] = useState({})
   const [missing, setMissing] = useState([])
   const [document, setDocument] = useState(null)
+  const [vista, setVista] = useState('chat')
   const [busy, setBusy] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [error, setError] = useState('')
@@ -213,6 +191,7 @@ export default function ContractGenerator() {
     setMissing([])
     setDocument(null)
     setTitle('')
+    setVista('chat')
     setError('')
   }
 
@@ -252,6 +231,8 @@ export default function ContractGenerator() {
       setData(res.current_data ?? {})
       setMissing(res.missing_fields ?? [])
       setDocument(res.rendered_document ?? null)
+      // Al completarse el documento, se muestra la hoja A4 (el chat sigue en su pestaña)
+      if (res.rendered_document) setVista('doc')
       setMessages((m) => [...m, { role: 'agent', text: res.agent_message }])
     } catch (err) {
       setError(errorText(err))
@@ -430,8 +411,125 @@ export default function ContractGenerator() {
           </p>
         </div>
 
+
+        {/* --- Panel de datos requeridos (RF04 / RF06) --- */}
+        <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+              <ListChecks className="h-4 w-4 text-slate-500" /> Datos requeridos
+            </h2>
+            <span className="text-xs font-semibold text-slate-600">
+              {completados}/{requeridos.length} · {progreso}%
+            </span>
+          </div>
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
+            <div
+              className={`h-full rounded-full transition-all ${
+                progreso === 100 ? 'bg-emerald-500' : 'bg-amber-500'
+              }`}
+              style={{ width: `${progreso}%` }}
+            />
+          </div>
+
+          {document ? (
+            <div className="mt-3 flex items-center gap-2 rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">
+              <CheckCircle2 className="h-4 w-4" />
+              Documento completo: listo para guardar o enviar a revisión.
+            </div>
+          ) : (
+            <p className="mt-3 text-xs text-slate-500">
+              {missing.length > 0
+                ? `El asistente aún necesita ${missing.length} dato(s) para generar el documento.`
+                : 'El documento se genera al completar todos los campos obligatorios.'}
+            </p>
+          )}
+
+          <ul className="mt-3 grid grid-cols-1 gap-x-4 gap-y-1.5 sm:grid-cols-2">
+            {requeridos.map((campo) => {
+              const ok = Boolean(showValue(fullData[campo]))
+              return (
+                <li
+                  key={campo}
+                  className={`flex items-start gap-2 text-xs ${ok ? 'text-slate-700' : 'text-slate-500'}`}
+                >
+                  {ok ? (
+                    <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                  ) : (
+                    <Circle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-300" />
+                  )}
+                  <span className={pendientes.includes(FIELD_LABELS[documentType][campo]) ? 'text-amber-800' : ''}>
+                    {FIELD_LABELS[documentType][campo]}
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+
+        {/* --- Paso 4: guardado (RF06) --- */}
+        <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <label className="text-xs font-medium text-slate-600">
+            Título del documento
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder={defaultTitle}
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500 focus:outline-none"
+            />
+          </label>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => guardar('DRAFT')}
+              disabled={!canSave || saving}
+              className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Guardar como Borrador (DRAFT)
+            </button>
+            <button
+              type="button"
+              onClick={() => guardar('UNDER_REVIEW')}
+              disabled={!canSave || saving}
+              className="inline-flex items-center gap-2 rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Enviar a Revisión Legal <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+          {!canSave && (
+            <p className="mt-2 text-[11px] text-slate-400">
+              Para guardar: elegí ambas partes y completá todas las ranuras obligatorias.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* ================= COLUMNA DERECHA: CHAT / DOCUMENTO ================= */}
+      <div className="space-y-3 xl:sticky xl:top-20 xl:self-start">
+        <div className="no-print inline-flex rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
+          {[
+            { value: 'chat', label: 'Chat con el asistente', icon: Bot },
+            { value: 'doc', label: 'Documento', icon: FileText },
+          ].map(({ value, label, icon: Icon }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setVista(value)}
+              className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                vista === value
+                  ? 'bg-slate-900 text-white'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5" /> {label}
+              {value === 'doc' && document && (
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              )}
+            </button>
+          ))}
+        </div>
         {/* --- Paso 3: conversación con el asistente (RF01, RF03) --- */}
-        <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+        <div className={`no-print overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm ${vista === 'chat' ? '' : 'hidden'}`}>
           <div className="flex items-center justify-between bg-slate-900 px-4 py-3">
             <div className="flex items-center gap-3">
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500 text-slate-900">
@@ -459,7 +557,7 @@ export default function ContractGenerator() {
             )}
           </div>
 
-          <div className="max-h-96 min-h-48 space-y-4 overflow-y-auto bg-slate-50 px-4 py-4">
+          <div className="h-[28rem] space-y-4 overflow-y-auto xl:h-[calc(100vh-22rem)] xl:min-h-[24rem] bg-slate-50 px-4 py-4">
             {/* Mensaje de bienvenida + accesos rápidos (mockups de demostración) */}
             <div className="flex items-start gap-2.5">
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-amber-400">
@@ -572,169 +670,29 @@ export default function ContractGenerator() {
             </p>
           </div>
         </div>
-
         {error && (
           <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /> {error}
           </div>
         )}
 
-        {/* --- Panel de datos requeridos (RF04 / RF06) --- */}
-        <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-              <ListChecks className="h-4 w-4 text-slate-500" /> Datos requeridos
-            </h2>
-            <span className="text-xs font-semibold text-slate-600">
-              {completados}/{requeridos.length} · {progreso}%
-            </span>
-          </div>
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
-            <div
-              className={`h-full rounded-full transition-all ${
-                progreso === 100 ? 'bg-emerald-500' : 'bg-amber-500'
-              }`}
-              style={{ width: `${progreso}%` }}
-            />
-          </div>
-
-          {document ? (
-            <div className="mt-3 flex items-center gap-2 rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">
-              <CheckCircle2 className="h-4 w-4" />
-              Documento completo: listo para guardar o enviar a revisión.
-            </div>
+        {vista === 'doc' &&
+          (document ? (
+            <article className="a4-sheet">
+              <div dangerouslySetInnerHTML={{ __html: documentToHtml(document) }} />
+            </article>
           ) : (
-            <p className="mt-3 text-xs text-slate-500">
-              {missing.length > 0
-                ? `El asistente aún necesita ${missing.length} dato(s) para generar el documento.`
-                : 'El documento se genera al completar todos los campos obligatorios.'}
-            </p>
-          )}
-
-          <ul className="mt-3 grid grid-cols-1 gap-x-4 gap-y-1.5 sm:grid-cols-2">
-            {requeridos.map((campo) => {
-              const ok = Boolean(showValue(fullData[campo]))
-              return (
-                <li
-                  key={campo}
-                  className={`flex items-start gap-2 text-xs ${ok ? 'text-slate-700' : 'text-slate-500'}`}
-                >
-                  {ok ? (
-                    <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" />
-                  ) : (
-                    <Circle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-300" />
-                  )}
-                  <span className={pendientes.includes(FIELD_LABELS[documentType][campo]) ? 'text-amber-800' : ''}>
-                    {FIELD_LABELS[documentType][campo]}
-                  </span>
-                </li>
-              )
-            })}
-          </ul>
-        </div>
-
-        {/* --- Paso 4: guardado (RF06) --- */}
-        <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <label className="text-xs font-medium text-slate-600">
-            Título del documento
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder={defaultTitle}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500 focus:outline-none"
-            />
-          </label>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => guardar('DRAFT')}
-              disabled={!canSave || saving}
-              className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              Guardar como Borrador (DRAFT)
-            </button>
-            <button
-              type="button"
-              onClick={() => guardar('UNDER_REVIEW')}
-              disabled={!canSave || saving}
-              className="inline-flex items-center gap-2 rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Enviar a Revisión Legal <ArrowRight className="h-4 w-4" />
-            </button>
-          </div>
-          {!canSave && (
-            <p className="mt-2 text-[11px] text-slate-400">
-              Para guardar: elegí ambas partes y completá todas las ranuras obligatorias.
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* ================= COLUMNA DERECHA: HOJA A4 ================= */}
-      <div className="xl:sticky xl:top-20 xl:self-start">
-        {document ? (
-          <article className="a4-sheet">
-            <div dangerouslySetInnerHTML={{ __html: documentToHtml(document) }} />
-          </article>
-        ) : (
-          <article className="a4-sheet">
-            <p className="text-center font-display text-sm font-bold tracking-widest text-slate-900">
-              ACOSTA &amp; ASOCIADOS
-            </p>
-            <p className="mt-1 text-center text-[11px] tracking-wide text-slate-500 uppercase">
-              {doc.title}
-            </p>
-            <hr className="my-5 border-slate-300" />
-
-            <p className="text-[11px] tracking-wide text-slate-500 uppercase">
-              Vista previa de datos
-            </p>
-
-            <dl className="mt-3 space-y-2">
-              {Object.keys(FIELD_LABELS[documentType]).map((campo) => {
-                const valor = showValue(fullData[campo])
-                return (
-                  <div key={campo} className="text-xs">
-                    <dt className="text-slate-500">{FIELD_LABELS[documentType][campo]}</dt>
-                    <dd className="mt-0.5">
-                      {valor ? (
-                        <span className="hl-field font-semibold">{valor}</span>
-                      ) : (
-                        <span className="hl-missing">pendiente</span>
-                      )}
-                    </dd>
-                  </div>
-                )
-              })}
-            </dl>
-
-            {Object.keys(EXTRA_LABELS[documentType]).some((c) => showValue(fullData[c])) && (
-              <>
-                <p className="mt-5 text-[11px] tracking-wide text-slate-500 uppercase">
-                  Datos complementarios
-                </p>
-                <dl className="mt-2 space-y-1.5">
-                  {Object.entries(EXTRA_LABELS[documentType])
-                    .filter(([campo]) => showValue(fullData[campo]))
-                    .map(([campo, label]) => (
-                      <div key={campo} className="text-xs">
-                        <dt className="text-slate-500">{label}</dt>
-                        <dd className="hl-field inline-block font-medium">
-                          {showValue(fullData[campo])}
-                        </dd>
-                      </div>
-                    ))}
-                </dl>
-              </>
-            )}
-
-            <p className="mt-6 border-t border-slate-200 pt-3 text-[10px] text-slate-400">
-              Los datos resaltados en amarillo provienen del usuario. El texto legal se
-              completa recién cuando todas las ranuras obligatorias están cargadas.
-            </p>
-          </article>
-        )}
+            <div className="no-print rounded-lg border border-dashed border-slate-300 bg-white p-10 text-center">
+              <FileText className="mx-auto h-8 w-8 text-slate-300" />
+              <p className="mt-2 text-sm font-semibold text-slate-700">
+                Todav&iacute;a no hay documento generado
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                Conversá con el asistente y completá los datos requeridos. El documento oficial
+                aparecerá ac&aacute;.
+              </p>
+            </div>
+          ))}
       </div>
     </div>
   )
