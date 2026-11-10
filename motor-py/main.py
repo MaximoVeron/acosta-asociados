@@ -14,8 +14,10 @@ Endpoints:
   GET  /health              → health-check del servicio.
 
 Variables de entorno (todas con defaults funcionales):
-  OLLAMA_MODEL    modelo local          (default: qwen3:4b)
+  OLLAMA_MODEL    modelo local          (default: gpt-oss:120b-cloud)
   OLLAMA_HOST     host de Ollama        (default: http://localhost:11434)
+  DEEPSEEK_API_KEY si está definida, se usa DeepSeek en lugar de Ollama
+  DEEPSEEK_MODEL  modelo de DeepSeek    (default: deepseek-flash)
   PORT            puerto del servicio   (default: 8000)
   AI_CORS_ORIGINS orígenes CORS, separados por comas
                   (default: backend Node 3000 + frontend Vite 5173)
@@ -31,7 +33,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from schemas.contract import DocumentType, ProcessRequest, ProcessResponse
-from services.agent_service import OLLAMA_MODEL, AgentError, process_chat
+from services.agent_service import MODELO_ACTIVO, AgentError, process_chat
 
 load_dotenv()
 
@@ -59,7 +61,7 @@ app.add_middleware(
 @app.get("/health")
 def health():
     """Estado del servicio y modelo configurado."""
-    return {"status": "ok", "service": "acosta-ai-agent", "model": OLLAMA_MODEL}
+    return {"status": "ok", "service": "acosta-ai-agent", "model": MODELO_ACTIVO}
 
 
 @app.post("/ai/process-contract", response_model=ProcessResponse)

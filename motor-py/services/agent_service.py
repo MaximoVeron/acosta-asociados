@@ -24,6 +24,7 @@ import os
 from datetime import date
 from pathlib import Path
 
+import httpx
 import ollama
 from dotenv import load_dotenv
 from jinja2 import Environment, FileSystemLoader
@@ -34,10 +35,16 @@ from services.numeros_a_letras import numero_a_palabras
 load_dotenv()  # lee un .env local si existe; si no, valen los defaults
 
 # --- Configuración ---
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3:4b")  # modelo local instalado
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gpt-oss:120b-cloud")  # modelo local instalado
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 
 _cliente = ollama.Client(host=OLLAMA_HOST)
+
+# Si hay DEEPSEEK_API_KEY se usa DeepSeek (API compatible con OpenAI); si no, Ollama.
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-flash")
+DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
+MODELO_ACTIVO = DEEPSEEK_MODEL if DEEPSEEK_API_KEY else OLLAMA_MODEL
 
 # Jinja2 carga las plantillas oficiales desde la carpeta templates/.
 # trim/lstrip_blocks evitan líneas en blanco extra por las etiquetas {% %}.
@@ -209,23 +216,39 @@ def _consultar_llm(mensaje_usuario: str, system_prompt: str) -> dict:
     # format="json" fuerza salida estructurada; temperature=0 la hace
     # determinista. El "thinking" del modelo se deja activado a propósito:
     # sin razonamiento, qwen3:4b devuelve todas las ranuras en null.
+    mensajes = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": mensaje_usuario},
+    ]
     try:
-        respuesta = _cliente.chat(
-            model=OLLAMA_MODEL,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": mensaje_usuario},
-            ],
-            format="json",
-            options={"temperature": 0},
-        )
+        if DEEPSEEK_API_KEY:
+            respuesta = httpx.post(
+                f"{DEEPSEEK_BASE_URL}/chat/completions",
+                headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}"},
+                json={
+                    "model": DEEPSEEK_MODEL,
+                    "messages": mensajes,
+                    "response_format": {"type": "json_object"},
+                    "temperature": 0,
+                },
+                timeout=120,
+            )
+            respuesta.raise_for_status()
+            texto = respuesta.json()["choices"][0]["message"]["content"]
+        else:
+            texto = _cliente.chat(
+                model=OLLAMA_MODEL,
+                messages=mensajes,
+                format="json",
+                options={"temperature": 0},
+            )["message"]["content"]
     except Exception as exc:
+        proveedor = DEEPSEEK_BASE_URL if DEEPSEEK_API_KEY else f"Ollama en {OLLAMA_HOST}"
         raise AgentError(
-            f"No se pudo consultar a Ollama en {OLLAMA_HOST} (modelo '{OLLAMA_MODEL}'). "
-            "Verifique que Ollama esté corriendo y el modelo instalado."
+            f"No se pudo consultar a {proveedor} (modelo '{MODELO_ACTIVO}'). "
+            "Verifique la conexión, la API key o que el modelo esté instalado."
         ) from exc
 
-    texto = respuesta["message"]["content"]
     try:
         datos = json.loads(texto)
     except json.JSONDecodeError as exc:
